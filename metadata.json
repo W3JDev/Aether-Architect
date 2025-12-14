@@ -1,0 +1,7 @@
+{
+  "name": "Aether Architect",
+  "description": "An ultra-premium AI mastermind that conceptualizes, designs, and builds unique digital artifacts and UI mockups from natural language prompts.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
