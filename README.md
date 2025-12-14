@@ -23,7 +23,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-org/aether-architect.git
+   git clone https://github.com/w3jdev/aether-architect.git
    cd aether-architect
    ```
 
@@ -56,6 +56,13 @@ We adhere to a strict "Docs as Code" philosophy. Detailed documentation can be f
 
 If you are an AI Coding Agent (Cursor, Copilot, Windsurf), please read **[AGENTS.md](./AGENTS.md)** strictly before making changes.
 
+## 👨‍💻 Author
+
+**Crafted by w3jdev**
+- Website: [w3jdev.com](https://w3jdev.com)
+- GitHub: [github.com/w3jdev](https://github.com/w3jdev)
+- LinkedIn: [linkedin.com/in/w3jdev](https://linkedin.com/in/w3jdev)
+
 ## 📄 License
 
-Proprietary Enterprise License. Copyright © 2023-2024 Aether Corp.
+Proprietary Enterprise License. Copyright © 2023-2024 Aether Corp & w3jdev.

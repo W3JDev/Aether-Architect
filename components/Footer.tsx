@@ -1,5 +1,5 @@
 import React from 'react';
-import { Wifi, Cpu, Github, Command } from 'lucide-react';
+import { Wifi, Cpu, Github, Command, Linkedin, Globe } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (
@@ -17,15 +17,40 @@ const Footer: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-6">
-         <a 
-            href="https://github.com/w3jdev" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 hover:text-white transition-colors"
-         >
-            <span>ENGINEERED BY W3JDEV</span>
-            <Github className="w-3 h-3" />
-         </a>
+         <div className="flex items-center gap-4 border-l border-white/5 pl-6">
+             <span className="hidden md:inline text-slate-600">© {new Date().getFullYear()} w3jdev</span>
+             
+             <a 
+                href="https://w3jdev.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors"
+                title="w3jdev.com"
+             >
+                <Globe className="w-3 h-3" />
+                <span className="hidden sm:inline">w3jdev.com</span>
+             </a>
+
+             <a 
+                href="https://github.com/w3jdev" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 hover:text-white transition-colors"
+                title="GitHub"
+             >
+                <Github className="w-3 h-3" />
+             </a>
+
+             <a 
+                href="https://linkedin.com/in/w3jdev" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 hover:text-blue-400 transition-colors"
+                title="LinkedIn"
+             >
+                <Linkedin className="w-3 h-3" />
+             </a>
+         </div>
       </div>
 
     </footer>

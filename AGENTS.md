@@ -2,6 +2,8 @@
 
 > **Attention AI Agents:** This file is your primary directive for working within the Aether Architect repository. Strictly adhere to these rules, styles, and workflows.
 
+**Primary Maintainer:** w3jdev (w3jdev.com)
+
 ## 1. Project Overview
 **Aether Architect** is an enterprise-grade AI interface builder utilizing the Gemini 2.0 Flash/Pro models to generate production-ready React UI components from natural language. It is a frontend-heavy application built with React 19, Tailwind CSS, and the `@google/genai` SDK.
 

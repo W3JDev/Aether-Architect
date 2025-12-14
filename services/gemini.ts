@@ -223,8 +223,9 @@ export const generateUITree = async (prd: PRD, designSystem: DesignSystem, onChu
     1. Use standard HTML tags.
     2. Use Tailwind CSS classes. Use 'arbitrary values' for complex shadows/gradients if needed.
     3. Structure: Root > Header, Main (with multiple sections), Footer.
-    4. RESPONSIVE: Mobile-first.
-    5. ACCESSIBILITY: 
+    4. Footer MUST include text: "Generated with Aether Architect by w3jdev".
+    5. RESPONSIVE: Mobile-first.
+    6. ACCESSIBILITY: 
        - Ensure all inputs have 'aria-label' or associated <label>.
        - Use role='alert' for validation message containers.
        - Use semantic tags (nav, main, aside, section).
@@ -278,6 +279,7 @@ export const editUITree = async (currentTree: UINode, updatePrompt: string, prd:
       5. "content" must NOT contain raw code.
       6. Output the entire tree, not just the changed nodes.
       7. Ensure 'card' elements have 'h-full'.
+      8. Ensure the footer credits 'w3jdev'.
     `;
     return streamTreeGeneration(ai, systemPrompt, onChunk);
 };
@@ -335,6 +337,12 @@ export const generateReactCode = async (prd: PRD, uiTree: UINode): Promise<strin
   const prompt = `
     Convert this UI JSON Tree into a React Functional Component (tsx).
     
+    Add this comment header at the top of the file:
+    /**
+     * Generated with Aether Architect by w3jdev
+     * https://w3jdev.com
+     */
+    
     Style Guide:
     - Use Tailwind CSS.
     - Implement the exact styles from the JSON.
@@ -367,6 +375,7 @@ export const generateReadme = async (prd: PRD): Promise<string> => {
         contents: `Create a professional README.md for this project.
         PRD: ${JSON.stringify(prd)}
         Include: Project Title, Overview, Key Features, Tech Stack (React, Tailwind), and 'How to Deploy' section (mention Vercel/Netlify).
+        Add an Acknowledgement section crediting 'Generated with Aether Architect by w3jdev (w3jdev.com)'.
         Use Markdown.`
     });
     return response.text || "# README";
