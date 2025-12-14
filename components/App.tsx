@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import PromptInput from './components/PromptInput';
@@ -9,12 +8,41 @@ import CodeView from './components/CodeView';
 import PropertiesPanel from './components/PropertiesPanel';
 import IntroOverlay from './components/IntroOverlay';
 import RefineToolbar from './components/RefineToolbar';
-import AdminModal from './components/AdminModal';
-import CreativeStudio from './components/CreativeStudio';
+// Lazy load heavy modals to improve initial bundle size and hydration
+const AdminModal = lazy(() => import('./components/AdminModal'));
+const CreativeStudio = lazy(() => import('./components/CreativeStudio'));
+
 import { generatePRD, generateDesignSystem, generateUITree, generateReactCode, editUITree, generateReadme } from './services/gemini';
 import { AppPhase, PRD, DesignSystem, UINode, Artifact } from './types';
-import { Code, Eye, RefreshCw, Smartphone, Monitor, Download, Undo, Redo, MousePointer2, Sparkles, Plus, AlertTriangle, Box, Cpu, Zap, Layers, Globe, Palette } from 'lucide-react';
+import { Code, Eye, RefreshCw, Smartphone, Monitor, Download, Undo, Redo, MousePointer2, Sparkles, Plus, AlertTriangle, Box, Cpu, Zap, Layers, Globe, Palette, WifiOff, DownloadCloud, LayoutDashboard, ShoppingCart, Rocket } from 'lucide-react';
 import { findNode, updateNodeInTree, moveNodeInTree, cloneTree } from './utils/treeHelpers';
+
+const TEMPLATES = [
+  { 
+      label: 'SaaS Dashboard', 
+      icon: LayoutDashboard, 
+      prompt: 'A modern analytics dashboard with sidebar navigation, data grid, metric cards, and a user profile dropdown.', 
+      vibe: 'Clean SaaS',
+      color: 'text-blue-400',
+      bg: 'bg-blue-500/10'
+  },
+  { 
+      label: 'AI Landing Page', 
+      icon: Rocket, 
+      prompt: 'High-converting landing page for an AI product with hero section, feature grid, pricing tiers, and testimonial carousel.', 
+      vibe: 'Futuristic & Neon',
+      color: 'text-purple-400',
+      bg: 'bg-purple-500/10'
+  },
+  { 
+      label: 'E-commerce App', 
+      icon: ShoppingCart, 
+      prompt: 'Mobile-first shopping app with product feed, category tabs, cart drawer, and checkout flow.', 
+      vibe: 'Glassmorphism',
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10'
+  },
+];
 
 const App: React.FC = () => {
   const [showIntro, setShowIntro] = useState(true);
@@ -37,8 +65,10 @@ const App: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedTree, setEditedTree] = useState<UINode | null>(null);
   
-  // Mobile Detection
+  // Mobile & PWA State
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -47,8 +77,46 @@ const App: React.FC = () => {
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+
+    // Network Status Listeners
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // PWA Install Prompt Listener
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Check for "shortcuts" URL params (PWA feature)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('action') === 'studio') {
+      setShowIntro(false);
+      setShowStudio(true);
+    }
+
+    return () => {
+        window.removeEventListener('resize', checkMobile);
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
+
+  const handleInstallClick = () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult: any) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        }
+        setDeferredPrompt(null);
+      });
+    }
+  };
 
   useEffect(() => {
     if (artifact && artifact.uiTree && !editedTree) {
@@ -66,20 +134,6 @@ const App: React.FC = () => {
     setEditedTree(newTree);
   };
 
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setEditedTree(history[historyIndex - 1]);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setEditedTree(history[historyIndex + 1]);
-    }
-  };
-
   const handleNodeUpdate = (id: string, updates: Partial<UINode>) => {
     if (!editedTree) return;
     const newTree = updateNodeInTree(editedTree, id, updates);
@@ -93,6 +147,10 @@ const App: React.FC = () => {
   };
 
   const handleCreate = async (prompt: string, vibe: string) => {
+    if (isOffline) {
+      setError("AI Generation requires an active internet connection.");
+      return;
+    }
     try {
       setError(null);
       setPhase(AppPhase.PLANNING);
@@ -144,6 +202,10 @@ const App: React.FC = () => {
 
   const handleRegenerate = async () => {
     if (!prd || !designSystem) return;
+    if (isOffline) {
+        setError("AI Generation requires internet.");
+        return;
+    }
     setPhase(AppPhase.BUILDING);
     setPartialTree(null);
     setError(null);
@@ -179,6 +241,10 @@ const App: React.FC = () => {
 
   const handleRefine = async (prompt: string) => {
     if (!artifact || !prd || !designSystem || !editedTree) return;
+    if (isOffline) {
+        setError("Refinement requires internet.");
+        return;
+    }
     setPhase(AppPhase.REFINING);
     setError(null);
     setPartialTree(editedTree);
@@ -226,7 +292,7 @@ const App: React.FC = () => {
   const selectedNode = (editedTree && selectedNodeId) ? findNode(editedTree, selectedNodeId) : null;
 
   return (
-    <div className="min-h-screen bg-black text-slate-200 selection:bg-blue-500/30 font-sans pb-16 relative overflow-x-hidden">
+    <div className="min-h-screen bg-obsidian text-slate-200 selection:bg-blue-500/30 selection:text-white font-sans pb-16 relative overflow-x-hidden bg-noise">
       
       {/* Background Atmosphere */}
       <div className="fixed inset-0 z-0 pointer-events-none bg-black">
@@ -237,10 +303,31 @@ const App: React.FC = () => {
 
       {showIntro && <IntroOverlay onComplete={() => setShowIntro(false)} />}
       
-      <AdminModal isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
-      <CreativeStudio isOpen={showStudio} onClose={() => setShowStudio(false)} />
+      <Suspense fallback={null}>
+        <AdminModal isOpen={showAdmin} onClose={() => setShowAdmin(false)} />
+        <CreativeStudio isOpen={showStudio} onClose={() => setShowStudio(false)} />
+      </Suspense>
       
       <Header onOpenAdmin={() => setShowAdmin(true)} onOpenStudio={() => setShowStudio(true)} />
+
+      {/* Network / PWA Status Indicators */}
+      <div className="fixed top-4 right-4 z-[60] flex flex-col gap-2 items-end">
+          {isOffline && (
+            <div className="bg-red-950/80 border border-red-500/30 text-red-200 px-4 py-2 rounded-full shadow-xl flex items-center gap-2 backdrop-blur-md animate-fade-in-up">
+              <WifiOff className="w-3 h-3" />
+              <span className="text-xs font-bold">OFFLINE</span>
+            </div>
+          )}
+          {deferredPrompt && (
+            <button 
+              onClick={handleInstallClick}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-full shadow-xl flex items-center gap-2 backdrop-blur-md animate-fade-in-up transition-all"
+            >
+              <DownloadCloud className="w-3 h-3" />
+              <span className="text-xs font-bold">INSTALL APP</span>
+            </button>
+          )}
+      </div>
 
       {error && (
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-[60] bg-red-950/80 border border-red-500/30 text-red-200 px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-fade-in-up backdrop-blur-md">
@@ -272,6 +359,27 @@ const App: React.FC = () => {
                 <PromptInput onSubmit={handleCreate} isProcessing={false} />
             </div>
 
+            {/* Starter Templates */}
+            <div className="w-full max-w-4xl mt-12 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {TEMPLATES.map((tmpl, i) => (
+                        <button 
+                            key={i}
+                            onClick={() => handleCreate(tmpl.prompt, tmpl.vibe)}
+                            className="group p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all text-left flex items-start gap-4"
+                        >
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${tmpl.bg} ${tmpl.color} group-hover:scale-110 transition-transform`}>
+                                <tmpl.icon className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-200 group-hover:text-white">{tmpl.label}</h3>
+                                <p className="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{tmpl.prompt}</p>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             {/* Social Proof / Trust Bar */}
             <div className="pt-12 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
                 <p className="text-xs font-semibold tracking-widest text-slate-600 uppercase mb-6">Powered By Next-Gen Infrastructure</p>
@@ -281,23 +389,6 @@ const App: React.FC = () => {
                     <div className="flex items-center gap-2"><Zap className="w-5 h-5" /><span className="font-bold">Gemini 2.0</span></div>
                     <div className="flex items-center gap-2"><Globe className="w-5 h-5" /><span className="font-bold">Vercel</span></div>
                 </div>
-            </div>
-
-            {/* Feature Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mt-20 text-left animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-                {[
-                    { icon: Cpu, title: "Intelligent PRDs", desc: "Automated requirements gathering and technical scoping." },
-                    { icon: Palette, title: "Atomic Design", desc: "Cohesive design systems with typography and color tokens." },
-                    { icon: Code, title: "Clean Code", desc: "Production-ready React + Tailwind output, ready to deploy." }
-                ].map((feat, i) => (
-                    <div key={i} className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors group">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-110 transition-transform">
-                            <feat.icon className="w-5 h-5" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-white mb-2">{feat.title}</h3>
-                        <p className="text-sm text-slate-500 leading-relaxed">{feat.desc}</p>
-                    </div>
-                ))}
             </div>
           </div>
         </section>
@@ -391,30 +482,57 @@ const App: React.FC = () => {
                 <div className="flex-1 min-h-0 bg-[#0F0F10] border border-white/10 rounded-2xl overflow-hidden relative flex flex-col shadow-2xl">
                     {activeTab === 'preview' ? (
                     <>
-                        {/* Browser Chrome */}
-                        <div className="h-12 border-b border-white/5 bg-[#18181B] flex items-center px-4 gap-4 shrink-0">
-                            <div className="flex gap-1.5">
-                                <div className="w-3 h-3 rounded-full bg-[#27272A] border border-white/5"></div>
-                                <div className="w-3 h-3 rounded-full bg-[#27272A] border border-white/5"></div>
-                                <div className="w-3 h-3 rounded-full bg-[#27272A] border border-white/5"></div>
+                        {/* Browser Chrome / Mobile Frame */}
+                        {viewport === 'mobile' || isMobileDevice ? (
+                             <div className="w-full h-full bg-[#18181B] flex items-center justify-center p-4">
+                                <div className="relative w-[375px] h-[812px] bg-black rounded-[3rem] border-[8px] border-[#27272A] shadow-2xl overflow-hidden ring-1 ring-white/10">
+                                    {/* Notch */}
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-[#27272A] rounded-b-3xl z-50 flex items-center justify-center">
+                                        <div className="w-16 h-4 bg-black rounded-full mt-1"></div>
+                                    </div>
+                                    {/* Status Bar */}
+                                    <div className="absolute top-2 right-6 z-40 text-[10px] text-white font-bold">5G</div>
+                                    <div className="absolute top-2 left-6 z-40 text-[10px] text-white font-bold">9:41</div>
+                                    
+                                    {/* Content */}
+                                    <div className="w-full h-full overflow-y-auto bg-white text-black font-sans scroll-smooth pt-8">
+                                        {editedTree && (
+                                            <ArtifactRenderer 
+                                                node={editedTree} 
+                                                selectedId={selectedNodeId}
+                                                onSelect={isEditMode ? setSelectedNodeId : undefined}
+                                                onMoveNode={isEditMode ? handleNodeMove : undefined}
+                                            />
+                                        )}
+                                    </div>
+                                    {/* Home Bar */}
+                                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-black/20 rounded-full z-50 backdrop-blur-md"></div>
+                                </div>
+                             </div>
+                        ) : (
+                            <div className="w-full h-full flex flex-col">
+                                <div className="h-12 border-b border-white/5 bg-[#18181B] flex items-center px-4 gap-4 shrink-0">
+                                    <div className="flex gap-1.5">
+                                        <div className="w-3 h-3 rounded-full bg-[#27272A] border border-white/5"></div>
+                                        <div className="w-3 h-3 rounded-full bg-[#27272A] border border-white/5"></div>
+                                        <div className="w-3 h-3 rounded-full bg-[#27272A] border border-white/5"></div>
+                                    </div>
+                                    <div className="flex-1 max-w-sm mx-auto h-7 bg-[#09090B] border border-white/5 rounded flex items-center justify-center text-[10px] text-slate-500 font-mono">
+                                        localhost:3000
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto bg-white text-black font-sans scroll-smooth">
+                                    {editedTree && (
+                                        <ArtifactRenderer 
+                                            node={editedTree} 
+                                            selectedId={selectedNodeId}
+                                            onSelect={isEditMode ? setSelectedNodeId : undefined}
+                                            onMoveNode={isEditMode ? handleNodeMove : undefined}
+                                        />
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex-1 max-w-sm mx-auto h-7 bg-[#09090B] border border-white/5 rounded flex items-center justify-center text-[10px] text-slate-500 font-mono">
-                                localhost:3000
-                            </div>
-                        </div>
-
-                        <div className={`flex-1 bg-white transition-all duration-500 mx-auto relative ${viewport === 'mobile' || isMobileDevice ? 'w-[375px] my-8 rounded-[3rem] border-[8px] border-[#27272A] shadow-2xl overflow-hidden' : 'w-full'}`}>
-                            <div className="w-full h-full overflow-y-auto bg-white text-black font-sans scroll-smooth">
-                                {editedTree && (
-                                    <ArtifactRenderer 
-                                        node={editedTree} 
-                                        selectedId={selectedNodeId}
-                                        onSelect={isEditMode ? setSelectedNodeId : undefined}
-                                        onMoveNode={isEditMode ? handleNodeMove : undefined}
-                                    />
-                                )}
-                            </div>
-                        </div>
+                        )}
                         
                         <RefineToolbar onRefine={handleRefine} isProcessing={phase === AppPhase.REFINING} />
                     </>

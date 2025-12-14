@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { UINode } from '../types';
 import { 
   Search, Settings, User, Trash, Edit, Plus, Download, Upload, Send, Play, Info, 
   ShoppingCart, LogIn, LogOut, ArrowRight, ArrowLeft, Menu, X, Check, Sparkles,
-  ChevronRight, ChevronLeft, AlertCircle, Home, Mail, Phone
+  ChevronRight, ChevronLeft, AlertCircle, Home, Mail, Phone, BoxSelect
 } from 'lucide-react';
 
 interface ArtifactRendererProps {
@@ -140,7 +139,7 @@ const ArtifactRenderer: React.FC<ArtifactRendererProps> = ({ node, selectedId, o
 
   // Styles construction
   const interactiveStyles = isInteractive 
-    ? ' cursor-pointer hover:ring-2 hover:ring-cyan-500/50 hover:ring-inset hover:bg-cyan-500/5 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ease-out will-change-transform' 
+    ? ' group cursor-pointer hover:ring-2 hover:ring-cyan-500/50 hover:ring-inset hover:bg-cyan-500/5 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 ease-out will-change-transform' 
     : '';
   
   const selectionStyles = isSelected 
@@ -159,8 +158,6 @@ const ArtifactRenderer: React.FC<ArtifactRendererProps> = ({ node, selectedId, o
   const finalClassName = `${styles || ''} ${defaultStyles} ${interactiveStyles} ${selectionStyles} ${dragStyles} relative transition-all duration-300 ease-out`;
 
   // Safely extract potential unsafe attributes that cause React crashes (like style="string")
-  // We ignore 'style' assuming styles are handled via Tailwind classes in `styles` prop.
-  // We ignore 'class' to prevent duplicate/invalid attribute warnings.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { style, class: classNameAttr, ...safeAttributes } = attributes || {};
 
@@ -186,22 +183,45 @@ const ArtifactRenderer: React.FC<ArtifactRendererProps> = ({ node, selectedId, o
     />
   ));
 
+  const InspectorBadge = isInteractive ? (
+     <div className="absolute top-0 right-0 z-[60] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+        <span className="bg-cyan-600 text-[8px] font-bold text-white px-1.5 py-0.5 rounded-bl shadow-sm uppercase tracking-wider flex items-center gap-1">
+             <BoxSelect className="w-2 h-2" />
+             {type}
+        </span>
+     </div>
+  ) : null;
+
   // Element Rendering Logic
   if (type === 'img') {
-    return <img {...commonProps} src={attributes?.src || 'https://picsum.photos/400/300'} alt={attributes?.alt || 'AI Generated'} />;
+    return (
+      <div className={`relative inline-block ${finalClassName}`}>
+        <img {...commonProps} src={attributes?.src || 'https://picsum.photos/400/300'} alt={attributes?.alt || 'AI Generated'} className="w-full h-full object-cover" />
+        {InspectorBadge}
+      </div>
+    );
   }
   
   if (type === 'input') {
     const placeholderText = attributes?.placeholder || getSmartPlaceholder(attributes);
-    // Ensure accessiblity if aria-label is missing
     const ariaLabel = attributes?.['aria-label'] || attributes?.name || placeholderText;
-    return <input {...commonProps} placeholder={placeholderText} aria-label={ariaLabel} />;
+    return (
+      <div className={`relative inline-block w-full`}>
+          <input {...commonProps} placeholder={placeholderText} aria-label={ariaLabel} />
+          {InspectorBadge}
+      </div>
+    );
   }
   
   if (type === 'textarea') {
     const placeholderText = attributes?.placeholder || getSmartPlaceholder(attributes);
     const ariaLabel = attributes?.['aria-label'] || attributes?.name || placeholderText;
-    return <textarea {...commonProps} placeholder={placeholderText} aria-label={ariaLabel} />;
+    return (
+      <div className={`relative inline-block w-full`}>
+        <textarea {...commonProps} placeholder={placeholderText} aria-label={ariaLabel} />
+        {InspectorBadge}
+      </div>
+    );
   }
 
   // Enhanced Button Rendering with Icons for Selected State
@@ -211,21 +231,17 @@ const ArtifactRenderer: React.FC<ArtifactRendererProps> = ({ node, selectedId, o
 
     if (isSelected && content) {
         const lower = content.toLowerCase();
-        // Determine position based on context (Next/Arrow usually go right)
         if (lower.includes('next') || lower.includes('right') || lower.includes('forward') || lower.includes('continue') || lower.includes('more')) {
             iconPos = 'right';
         }
         iconNode = getSuggestedIcon(content);
     }
 
-    // If icon is present, ensure flex layout for alignment
     const buttonClasses = iconNode 
         ? `${commonProps.className} flex items-center justify-center gap-2`
         : commonProps.className;
     
-    // Fallback aria-label for icon-only buttons if not provided
     const ariaLabel = attributes?.['aria-label'] || (!content ? 'Button' : undefined);
-    // Add type="button" by default to prevent form submission unless specified
     const btnType = attributes?.type || 'button';
 
     return (
@@ -234,20 +250,18 @@ const ArtifactRenderer: React.FC<ArtifactRendererProps> = ({ node, selectedId, o
             {content}
             {iconPos === 'right' && iconNode}
             {renderedChildren}
+            {InspectorBadge}
         </button>
     );
   }
-
-  // Sanitize content to prevent rendering raw code or script tags if they slip through
-  const safeContent = content ? content.replace(/</g, '&lt;').replace(/>/g, '&gt;') : content;
 
   const SafeTag = (['div', 'section', 'header', 'footer', 'nav', 'article', 'aside', 'main', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'button', 'a', 'ul', 'li', 'label', 'form'].includes(type) ? type : 'div') as React.ElementType;
 
   return (
     <SafeTag {...commonProps}>
-      {/* We purposefully do not use dangerouslySetInnerHTML to prevent XSS/injection */}
       {content}
       {renderedChildren}
+      {InspectorBadge}
     </SafeTag>
   );
 };

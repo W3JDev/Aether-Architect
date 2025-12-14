@@ -149,14 +149,19 @@ export const generatePRD = async (prompt: string): Promise<PRD> => {
 
 export const generateDesignSystem = async (prd: PRD): Promise<DesignSystem> => {
   const systemInstruction = `You are the HEAD OF DESIGN Agent.
-  Based on the PRD, create a "Ultra High Quality" design system.
-  Ensure high contrast, accessibility.
+  Based on the PRD, create a "Ultra High Quality" premium design system.
+  
+  AESTHETIC GUIDELINES (Premium/Enterprise):
+  - Favor "Zinc", "Slate", and "Neutral" palettes for background/surfaces.
+  - Avoid purely saturated colors for backgrounds. Use them for accents only.
+  - Typography: Prefer 'Inter', 'Geist Sans', or 'Plus Jakarta Sans'.
+  - Spacing: generous, airy.
+  - Radii: tailored (e.g., 'rounded-xl' or 'rounded-2xl').
   
   Styles to consider based on PRD:
-  - Glassmorphism (Backdrop blur, semi-transparent white/black)
-  - 3D Jelly / Claymorphism (Soft shadows, rounded corners, pastel gradients)
-  - Neo-Brutalism (Hard shadows, thick borders, bold colors)
-  - Hyper-Realistic (Subtle gradients, metallic sheens)
+  - Clean SaaS (Stripe-like, Vercel-like): High contrast, subtle borders, white/off-white backgrounds.
+  - Dark Enterprise: Slate-900 backgrounds, blue/purple accents, glowing borders.
+  - Glassmorphism: Backdrop blur, semi-transparent white/black.
   
   Return JSON.`;
 
@@ -213,30 +218,25 @@ export const generateUITree = async (prd: PRD, designSystem: DesignSystem, onChu
     PRD: ${JSON.stringify(prd)}
     Design System: ${JSON.stringify(designSystem)}
     
-    CAPABILITIES & STYLES:
-    - Implement "Jelly UI" using: rounded-3xl, bg-white/70, backdrop-blur-2xl, border border-white/40, shadow-[8px_8px_16px_rgba(0,0,0,0.1),-8px_-8px_16px_rgba(255,255,255,0.8),inset_2px_2px_4px_rgba(255,255,255,0.5)].
-    - Implement "Glassmorphism" using: bg-white/10, border-white/20, backdrop-blur-md, shadow-lg.
-    - Implement "3D Buttons" using: shadow-[0_4px_0_rgb(0,0,0)], active:shadow-none, active:translate-y-1, transition-all.
-    - Implement "Liquid Metal" using: bg-gradient-to-br from-slate-300 via-white to-slate-300, shadow-[inset_0_2px_4px_rgba(255,255,255,0.8)].
+    DESIGN & IMPLEMENTATION RULES (PREMIUM QUALITY):
+    1. **Layouts**: Use Flexbox/Grid extensively. Main content should often be centered max-w-7xl mx-auto.
+    2. **Cards**: Always use 'bg-white/5' or 'bg-white' (depending on theme) with 'border border-white/10' or 'border-gray-200'. Add 'shadow-sm' or 'hover:shadow-md' transition.
+    3. **Buttons**: High quality interactive states (hover:scale-[1.02] active:scale-[0.98]).
+    4. **Images**: Use 'rounded-xl', 'object-cover', 'aspect-video'.
+    5. **Glass**: For overlays, use 'backdrop-blur-xl bg-white/60' or 'bg-black/60'.
+    6. **Gradients**: Use subtle text gradients for headings (bg-clip-text text-transparent bg-gradient-to-r ...).
     
-    RULES:
-    1. Use standard HTML tags.
-    2. Use Tailwind CSS classes. Use 'arbitrary values' for complex shadows/gradients if needed.
-    3. Structure: Root > Header, Main (with multiple sections), Footer.
-    4. Footer MUST include text: "Generated with Aether Architect by w3jdev".
-    5. RESPONSIVE: Mobile-first.
-    6. ACCESSIBILITY: 
-       - Ensure all inputs have 'aria-label' or associated <label>.
-       - Use role='alert' for validation message containers.
-       - Use semantic tags (nav, main, aside, section).
-       - Ensure sufficient color contrast.
+    STRUCTURE RULES:
+    - Root > Header, Main, Footer.
+    - Header: Logo (left), Nav (center), Actions (right).
+    - Footer: Must include "Built with Aether Architect".
+    - Forms: Inputs must have 'focus:ring-2 focus:ring-offset-2' for accessibility and polish.
     
     FORMATTING:
     - Return **NDJSON** (Newline Delimited JSON).
     - Node format: { "id": "uuid", "parentId": "uuid", "type": "string", "styles": "string", "content": "string", "attributes": {} }
     - Root first.
     - "content" MUST NOT contain raw code blocks.
-    - Ensure 'card' elements in a grid have 'h-full' to match height.
   `;
 
   if (currentProvider === 'native') {
@@ -268,18 +268,15 @@ export const editUITree = async (currentTree: UINode, updatePrompt: string, prd:
       PRD Title: ${prd.title}
       Design System: ${JSON.stringify(designSystem)}
 
-      STYLES: Support "make it 3D", "add jelly effect", "more sleek", "restyle to swiss design".
+      STYLES: Maintain the Premium/Enterprise aesthetic.
       ACCESSIBILITY: Improve ARIA labels and semantic structure if missing.
       
       RULES:
       1. Return the **FULL** updated UI Tree in **NDJSON** format.
-      2. Each line must be a FLAT node object: {"id": "...", "parentId": "...", "type": "...", "styles": "...", "content": "..."}
+      2. Each line must be a FLAT node object.
       3. The first node MUST be the Root (parentId: null).
-      4. PRESERVE existing IDs for nodes that haven't changed.
-      5. "content" must NOT contain raw code.
-      6. Output the entire tree, not just the changed nodes.
-      7. Ensure 'card' elements have 'h-full'.
-      8. Ensure the footer credits 'w3jdev'.
+      4. PRESERVE existing IDs for nodes that haven't changed to prevent UI flicker.
+      5. Output the entire tree, not just the changed nodes.
     `;
     return streamTreeGeneration(ai, systemPrompt, onChunk);
 };
@@ -339,7 +336,7 @@ export const generateReactCode = async (prd: PRD, uiTree: UINode): Promise<strin
     
     Add this comment header at the top of the file:
     /**
-     * Generated with Aether Architect by w3jdev
+     * Generated with Aether Architect
      * https://w3jdev.com
      */
     
@@ -375,7 +372,7 @@ export const generateReadme = async (prd: PRD): Promise<string> => {
         contents: `Create a professional README.md for this project.
         PRD: ${JSON.stringify(prd)}
         Include: Project Title, Overview, Key Features, Tech Stack (React, Tailwind), and 'How to Deploy' section (mention Vercel/Netlify).
-        Add an Acknowledgement section crediting 'Generated with Aether Architect by w3jdev (w3jdev.com)'.
+        Add an Acknowledgement section crediting 'Generated with Aether Architect'.
         Use Markdown.`
     });
     return response.text || "# README";
