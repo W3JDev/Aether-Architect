@@ -2,14 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-title" content="Aether">
+    <meta name="theme-color" content="#030303">
     <meta name="author" content="w3jdev">
+    <meta name="description" content="Enterprise AI Interface Builder. Conceptualize, Design, and Build React Apps in seconds.">
     <meta property="og:site_name" content="Aether Architect by w3jdev">
     <meta property="og:title" content="Aether Architect | Enterprise AI Interface Builder">
     <title>Aether Architect | Enterprise AI Interface Builder</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f4a0.png">
     
     <!-- Preconnect for Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,6 +74,7 @@
         color: #e2e8f0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
       }
       
       /* Premium Selection */
